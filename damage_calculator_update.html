@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Artale 楓之谷一站式角色計算器</title>
+  <style>
+    body { font-family: sans-serif; max-width: 1200px; margin: auto; padding: 20px; }
+    input[type="number"], select { width: 60px; }
+    table, th, td { border: 1px solid #aaa; border-collapse: collapse; padding: 4px; }
+    th { background-color: #eee; }
+    .result-container { display: flex; gap: 40px; }
+    .result-box { flex: 1; border: 1px solid #ccc; padding: 10px; background: #f9f9f9; }
+    .equip-container { display: flex; gap: 40px; }
+    .equip-block { flex: 1; }
+  </style>
+</head>
+<body>
+  <h1>Artale 楓之谷角色計算器</h1>
+
+  <h2>計算結果</h2>
+  <div style="display: flex; gap: 20px; align-items: center;">
+    <div>技能：
+      <select id="skill_select" style="width: 160px;">
+        <option value="1-15">槍連擊（等級 1 至 15）</option>
+        <option value="16-30">槍連擊（等級 16 至 30）</option>
+        <option value="heaven">魔天一擊（單發高傷）</option>
+      </select>
+    </div>
+    <div>裝備1攻速：
+      <select id="speed_select1" style="width: 140px;">
+        <option value="6">普通（6）</option>
+        <option value="7">慢（7）</option>
+        <option value="8">慢（8）</option>
+      </select>
+    </div>
+    <div>裝備1倍率：<input type="number" id="rate1" value="100"></div>
+    <div>裝備2攻速：
+      <select id="speed_select2" style="width: 140px;">
+        <option value="6">普通（6）</option>
+        <option value="7">慢（7）</option>
+        <option value="8">慢（8）</option>
+      </select>
+    </div>
+    <div>裝備2倍率：<input type="number" id="rate2" value="100"></div>
+  </div>
+  <div class="result-container" id="output"></div>
+
+  <h2>角色基本數值</h2>
+  <label>力量: <input type="number" id="base_str" value="0"></label>
+  <label>敏捷: <input type="number" id="base_dex" value="0"></label>
+  <label>智力: <input type="number" id="base_int" value="0"></label>
+  <label>幸運: <input type="number" id="base_luk" value="0"></label>
+
+  <div>
+    <label><input type="checkbox" id="buff_sniper"> 精準之槍 (+命中20)</label>
+    <label><input type="checkbox" id="buff_boost"> 自身強化 (+移速10)</label>
+    <label><input type="checkbox" id="buff_hitpill"> 命中藥丸 (+命中10)</label>
+    <label><input type="checkbox" id="buff_speedpill"> 移速藥丸 (+移速10)</label>
+    <label><input type="checkbox" id="buff_atkpill"> 攻擊藥丸 (+攻擊力10)</label>
+  </div>
+
+  <h2>裝備欄位 <button onclick="copyEquip1to2()">一鍵複製</button></h2>
+  <div class="equip-container">
+    <div class="equip-block">
+      <h3>裝備1 <button onclick="clearEquip(1)">清空</button></h3>
+      <table>
+        <thead><tr><th>部位</th><th>STR</th><th>DEX</th><th>INT</th><th>LUK</th><th>攻擊力</th><th>命中</th><th>移速</th></tr></thead>
+        <tbody id="equip_table_1"></tbody>
+      </table>
+    </div>
+    <div class="equip-block">
+      <h3>裝備2 <button onclick="clearEquip(2)">清空</button></h3>
+      <table>
+        <thead><tr><th>部位</th><th>STR</th><th>DEX</th><th>INT</th><th>LUK</th><th>攻擊力</th><th>命中</th><th>移速</th></tr></thead>
+        <tbody id="equip_table_2"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const positions = ["武器", "手套", "頭盔", "眼飾", "耳環", "上衣", "下衣", "套服", "披風", "鞋子", "勳章", "臉飾", "項鍊", "腰帶"];
+
+    function initTables() {
+      positions.forEach((pos, i) => {
+        const row1 = `<tr><td>${pos}</td>` + Array.from({length: 7}, (_, j) => `<td><input type="number" id="e_${i}_${j}" value="0"></td>`).join('') + `</tr>`;
+        const row2 = `<tr><td>${pos}</td>` + Array.from({length: 7}, (_, j) => `<td><input type="number" id="e_${i}_${j+7}" value="0"></td>`).join('') + `</tr>`;
+        document.getElementById("equip_table_1").insertAdjacentHTML('beforeend', row1);
+        document.getElementById("equip_table_2").insertAdjacentHTML('beforeend', row2);
+      });
+    }
+
+    function sumEquip(cols) {
+      return positions.map((_, i) =>
+        cols.map((col, j) => parseInt(document.getElementById(`e_${i}_${col}`).value || 0))
+      ).reduce((a, b) => a.map((v, i) => v + b[i]));
+    }
+
+    function getAttackInterval(skill, speed) {
+      const table = {
+        "1-15": {6: 900, 7: 960, 8: 1020},
+        "16-30": {6: 1050, 7: 1140, 8: 1200},
+        "heaven": {6: 750, 7: 810, 8: 870},
+      };
+      return table[skill][speed] || 1000;
+    }
+
+    function calculate() {
+      const str = +document.getElementById("base_str").value;
+      const dex = +document.getElementById("base_dex").value;
+      const luk = +document.getElementById("base_luk").value;
+      const skill = document.getElementById("skill_select").value;
+      const speed1 = +document.getElementById("speed_select1").value;
+      const speed2 = +document.getElementById("speed_select2").value;
+      const rate1 = +document.getElementById("rate1").value / 100;
+      const rate2 = +document.getElementById("rate2").value / 100;
+
+      const eq1 = sumEquip([0,1,2,3,4,5,6]);
+      const eq2 = sumEquip([7,8,9,10,11,12,13]);
+
+      const atk1 = eq1[4] + (document.getElementById("buff_atkpill").checked ? 10 : 0);
+      const atk2 = eq2[4] + (document.getElementById("buff_atkpill").checked ? 10 : 0);
+
+      const calc = (str,dex,luk,atk,eq,rate,speed) => {
+        const min = ((str*3.6*0.6*0.9 + dex) * atk) / 100;
+        const max = ((str*5.1 + dex) * atk) / 100;
+        const avg = (min + max) / 2;
+        return {
+          min: min.toFixed(2),
+          max: max.toFixed(2),
+          avg: (avg*rate).toFixed(2),
+          dpm: (avg*rate * 60000 / getAttackInterval(skill, speed)).toFixed(2),
+          hit: (eq[5] + dex * 0.8 + luk * 0.5 + (document.getElementById("buff_sniper").checked ? 20 : 0) + (document.getElementById("buff_hitpill").checked ? 10 : 0)).toFixed(1),
+          move: eq[6] + 100 + (document.getElementById("buff_boost").checked ? 10 : 0) + (document.getElementById("buff_speedpill").checked ? 10 : 0),
+          atk
+        };
+      }
+
+      const base1 = [str+eq1[0], dex+eq1[1], luk+eq1[3]];
+      const base2 = [str+eq2[0], dex+eq2[1], luk+eq2[3]];
+
+      const res1 = calc(...base1, atk1, eq1, rate1, speed1);
+      const res2 = calc(...base2, atk2, eq2, rate2, speed2);
+
+      document.getElementById("output").innerHTML = `
+        <div class="result-box">
+          <h3>裝備1</h3>
+          最小攻擊力: ${res1.min}<br>
+          最大攻擊力: ${res1.max}<br>
+          平均傷害: ${res1.avg}<br>
+          每分鐘均傷: ${res1.dpm}<br>
+          命中率: ${res1.hit}<br>
+          移動速度: ${res1.move}
+        </div>
+        <div class="result-box">
+          <h3>裝備2</h3>
+          最小攻擊力: ${res2.min}<br>
+          最大攻擊力: ${res2.max}<br>
+          平均傷害: ${res2.avg}<br>
+          每分鐘均傷: ${res2.dpm}<br>
+          命中率: ${res2.hit}<br>
+          移動速度: ${res2.move}
+        </div>`;
+    }
+
+    function copyEquip1to2() {
+      for (let i = 0; i < 14; i++) {
+        for (let j = 0; j < 7; j++) {
+          document.getElementById(`e_${i}_${j+7}`).value = document.getElementById(`e_${i}_${j}`).value;
+        }
+      }
+      calculate();
+    }
+
+    function clearEquip(set) {
+      const offset = set === 1 ? 0 : 7;
+      for (let i = 0; i < 14; i++) {
+        for (let j = 0; j < 7; j++) {
+          document.getElementById(`e_${i}_${j+offset}`).value = 0;
+        }
+      }
+      calculate();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      initTables();
+      document.querySelectorAll("input, select").forEach(el => {
+        const val = localStorage.getItem(el.id);
+        if (val !== null) el.type === "checkbox" ? el.checked = val === "true" : el.value = val;
+        el.addEventListener("input", () => {
+          localStorage.setItem(el.id, el.type === "checkbox" ? el.checked : el.value);
+          calculate();
+        });
+      });
+      setTimeout(calculate, 0);
+    });
+  </script>
+</body>
+</html>
