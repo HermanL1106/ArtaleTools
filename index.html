@@ -56,7 +56,7 @@
     <label><input type="checkbox" id="buff_boost"> 自身強化 (+移速10)</label>
     <label><input type="checkbox" id="buff_hitpill"> 命中藥丸 (+命中10)</label>
     <label><input type="checkbox" id="buff_speedpill"> 移速藥丸 (+移速10)</label>
-    <label><input type="checkbox" id="buff_atkpill"> 攻擊藥丸 (+攻擊力10)</label>
+    <label><input type="checkbox" id="buff_atkpill"> 攻擊藥丸 (+攻擊力+5)</label>
   </div>
 
   <h2>裝備欄位 <button onclick="copyEquip1to2()">一鍵複製</button></h2>
@@ -117,8 +117,8 @@
       const eq1 = sumEquip([0,1,2,3,4,5,6]);
       const eq2 = sumEquip([7,8,9,10,11,12,13]);
 
-      const atk1 = eq1[4] + (document.getElementById("buff_atkpill").checked ? 10 : 0);
-      const atk2 = eq2[4] + (document.getElementById("buff_atkpill").checked ? 10 : 0);
+      const atk1 = eq1[4] + (document.getElementById("buff_atkpill").checked ? 5 : 0);
+      const atk2 = eq2[4] + (document.getElementById("buff_atkpill").checked ? 5 : 0);
 
       const calc = (str,dex,luk,atk,eq,rate,speed) => {
         const min = ((str*3.6*0.6*0.9 + dex) * atk) / 100;
