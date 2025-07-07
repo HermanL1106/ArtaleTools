@@ -60,10 +60,12 @@
       let totalSuccess = 0;
       let fullSuccessItems = 0;
       let totalCost = 0;
+      let totalScrollsUsed = 0;
+      let scroll10Used = 0;
+      let scroll60Used = 0;
       let logs = [];
-      let successCounts = Array(slotCount + 1).fill(0); // 統計 0~slotCount 次成功的數量
+      let successCounts = Array(slotCount + 1).fill(0);
 
-      // 取得每卷卷軸成功率與費用
       let slotRates = [], slotCosts = [];
       for (let i = 0; i < slotCount; i++) {
         const rate = parseFloat(document.getElementById(`scrollSelect${i}`).value);
@@ -78,6 +80,11 @@
 
         for (let j = 0; j < slotCount; j++) {
           itemCost += slotCosts[j];
+          totalScrollsUsed++;
+
+          if (slotRates[j] === 0.1) scroll10Used++;
+          else if (slotRates[j] === 0.6) scroll60Used++;
+
           if (Math.random() <= slotRates[j]) {
             successCount++;
             result.push("✔️");
@@ -94,28 +101,27 @@
         logs.push({ index: i + 1, result: result.join(" "), success: successCount });
       }
 
-      // 理論成功率
-let theoreticalRate = 1;
-for (let r of slotRates) {
-  theoreticalRate *= r;
-}
-const estimatedRequired = theoreticalRate === 0 ? "無限（成功率為0）" : (1 / theoreticalRate).toFixed(2);
+      let theoreticalRate = 1;
+      for (let r of slotRates) {
+        theoreticalRate *= r;
+      }
+      const estimatedRequired = theoreticalRate === 0 ? "無限（成功率為0）" : (1 / theoreticalRate).toFixed(2);
 
       let html = `
         <p>總成功次數：${totalSuccess}</p>
         <p>成功製作出${slotCount}卷皆成功的裝備數量：${fullSuccessItems}</p>
         <p>總花費：${totalCost.toLocaleString()} 元</p>
-        <p>預估製作一件全成功裝備平均需 ${estimatedRequired} 件裝備</p>
+        <p>總使用卷軸數：${totalScrollsUsed} 張</p>
+        <p>其中 10%卷軸：${scroll10Used} 張，60%卷軸：${scroll60Used} 張</p>
+        <p>（期望值）平均需 <strong>${estimatedRequired}</strong> 件裝備才能成功製作出一件全成功裝備</p>
       `;
 
-      // 統計表
       html += `<h4>成功次數分布</h4><table><tr><th>成功次數</th><th>裝備數量</th></tr>`;
       for (let i = 0; i <= slotCount; i++) {
         html += `<tr><td>${i}</td><td>${successCounts[i]}</td></tr>`;
       }
       html += `</table>`;
 
-      // 詳細結果表
       html += `<h4>詳細裝備使用結果</h4><table><tr><th>裝備編號</th><th>使用紀錄</th><th>成功次數</th></tr>`;
       logs.forEach(log => {
         html += `<tr><td>${log.index}</td><td>${log.result}</td><td>${log.success}</td></tr>`;
