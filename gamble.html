@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>裝備卷軸模擬器</title>
+  <style>
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 4px; }
+    th { background-color: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h2>裝備卷軸模擬器</h2>
+
+  <div>
+    <label>裝備可使用卷軸次數：<input id="slotCount" type="number" value="7"></label><br>
+    <label>準備裝備數量：<input id="itemCount" type="number" value="100"></label><br>
+    <label>每件裝備價卷：<input id="itemPrice" type="number" value="10000"></label><br><br>
+
+    <label>10%卷軸價卷：<input id="scroll10Price" type="number" value="2000"></label><br>
+    <label>60%卷軸價卷：<input id="scroll60Price" type="number" value="1000"></label><br><br>
+
+    <p>請選擇每一卷卷軸使用的成功率：</p>
+    <div id="scrollSelectors"></div>
+
+    <br><button onclick="simulate()">開始模擬</button>
+  </div>
+
+  <h3>模擬結果</h3>
+  <div id="result"></div>
+
+  <script>
+    function createSelectors() {
+      const slotCount = parseInt(document.getElementById('slotCount').value);
+      const container = document.getElementById('scrollSelectors');
+      container.innerHTML = '';
+
+      for (let i = 0; i < slotCount; i++) {
+        const select = document.createElement('select');
+        select.id = `scrollSelect${i}`;
+        const opt10 = new Option("10%", "0.1");
+        const opt60 = new Option("60%", "0.6");
+        select.appendChild(opt10);
+        select.appendChild(opt60);
+        container.appendChild(document.createTextNode(`第 ${i + 1} 卷：`));
+        container.appendChild(select);
+        container.appendChild(document.createElement('br'));
+      }
+    }
+
+    document.getElementById('slotCount').addEventListener('change', createSelectors);
+    window.onload = createSelectors;
+
+    function simulate() {
+      const slotCount = parseInt(document.getElementById('slotCount').value);
+      const itemCount = parseInt(document.getElementById('itemCount').value);
+      const itemPrice = parseInt(document.getElementById('itemPrice').value);
+      const scroll10Price = parseInt(document.getElementById('scroll10Price').value);
+      const scroll60Price = parseInt(document.getElementById('scroll60Price').value);
+
+      let totalSuccess = 0;
+      let fullSuccessItems = 0;
+      let totalCost = 0;
+      let logs = [];
+      let successCounts = Array(slotCount + 1).fill(0); // 統計 0~slotCount 次成功的數量
+
+      // 取得每卷卷軸成功率與費用
+      let slotRates = [], slotCosts = [];
+      for (let i = 0; i < slotCount; i++) {
+        const rate = parseFloat(document.getElementById(`scrollSelect${i}`).value);
+        slotRates.push(rate);
+        slotCosts.push(rate === 0.1 ? scroll10Price : scroll60Price);
+      }
+
+      for (let i = 0; i < itemCount; i++) {
+        let successCount = 0;
+        let itemCost = itemPrice;
+        let result = [];
+
+        for (let j = 0; j < slotCount; j++) {
+          itemCost += slotCosts[j];
+          if (Math.random() <= slotRates[j]) {
+            successCount++;
+            result.push("✔️");
+          } else {
+            result.push("❌");
+            break;
+          }
+        }
+
+        successCounts[successCount]++;
+        totalSuccess += successCount;
+        totalCost += itemCost;
+        if (successCount === slotCount) fullSuccessItems++;
+        logs.push({ index: i + 1, result: result.join(" "), success: successCount });
+      }
+
+      // 理論成功率
+let theoreticalRate = 1;
+for (let r of slotRates) {
+  theoreticalRate *= r;
+}
+const estimatedRequired = theoreticalRate === 0 ? "無限（成功率為0）" : (1 / theoreticalRate).toFixed(2);
+
+      let html = `
+        <p>總成功次數：${totalSuccess}</p>
+        <p>成功製作出${slotCount}卷皆成功的裝備數量：${fullSuccessItems}</p>
+        <p>總花費：${totalCost.toLocaleString()} 元</p>
+        <p>預估製作一件全成功裝備平均需 ${estimatedRequired} 件裝備</p>
+      `;
+
+      // 統計表
+      html += `<h4>成功次數分布</h4><table><tr><th>成功次數</th><th>裝備數量</th></tr>`;
+      for (let i = 0; i <= slotCount; i++) {
+        html += `<tr><td>${i}</td><td>${successCounts[i]}</td></tr>`;
+      }
+      html += `</table>`;
+
+      // 詳細結果表
+      html += `<h4>詳細裝備使用結果</h4><table><tr><th>裝備編號</th><th>使用紀錄</th><th>成功次數</th></tr>`;
+      logs.forEach(log => {
+        html += `<tr><td>${log.index}</td><td>${log.result}</td><td>${log.success}</td></tr>`;
+      });
+      html += `</table>`;
+
+      document.getElementById('result').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
